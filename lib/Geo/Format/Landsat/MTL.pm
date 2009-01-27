@@ -34,6 +34,12 @@ Geo::Format::Landsat::MTL - read landsat meta data from MTL file
 
  my ($type, $data) = landsat_mtl_from_file $filename;
 
+ # study the result.
+ use Data::Dumper;
+ warn Dumper $data;
+
+ print $data->{METADATA_FILE_INFO}{ORIGIN}, "\n";
+
 =chapter DESCRIPTION
 Process the content of a MTL file, as specified by document
 C<level1_dfcb_rev5_401.pdf>.
@@ -43,6 +49,15 @@ See also F<http://landsathandbook.gsfc.nasa.gov/handbook/handbook_toc.html>
 
 =function landsat_mtl_from_file FILE
 Read one Vgroup record from the FILE, specified by name or filehandle.
+
+Returned is a pair: the name of the record (for instance, C<L1_METADATA_FILE>)
+and the destructed content.  Each nested group is represented by a nested
+HASH.
+
+The HASHes contain keys in capitals, which are exactly the fields as
+found in the meta-data file.  Additionally, a number of lower-cased
+keys are added (the lower cased versions of some upper-cased names)
+with smart processed information.
 =cut
 
 sub landsat_mtl_from_file($)
@@ -95,7 +110,6 @@ sub _process_group($)
 
     $data;
 }
-
 
 sub _cleanup_mtl($)
 {   my $data = shift;

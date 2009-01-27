@@ -14,5 +14,6 @@ $Data::Dumper::Indent = 1;
 
 my ($fn) = @ARGV;
 
-my $data = landsat_mtl_from_file $fn;
+my ($type, $data) = landsat_mtl_from_file $fn;
+warn "TYPE=$type\n";
 warn Dumper $data;
