@@ -4,14 +4,18 @@ use strict;
 package Geo::Format::Landsat::MTL;
 use base 'Exporter';
 
-our @EXPORT = qw/landsat_mtl_from_file/;
+our @EXPORT = qw/
+  landsat_mtl_from_file
+  landsat_meta_from_filename
+  /;
 
 use constant METADATA_RECORD => 65536;
 use constant METERS2FEET     => 3.2808399;
 
-use Geo::Point ();
+use Geo::Point     ();
+use File::Basename qw/basename/;
 
-use POSIX      qw/mktime strftime tzset/;
+use POSIX          qw/mktime strftime tzset/;
 $ENV{TZ} = 'UTC'; tzset;
 
 sub _process_group($);
@@ -40,12 +44,33 @@ Geo::Format::Landsat::MTL - read landsat meta data from MTL file
 
  print $data->{METADATA_FILE_INFO}{ORIGIN}, "\n";
 
+ my $data = landsat_meta_from_filename $filename;
+ print $data->{WRS_PATH};
+
 =chapter DESCRIPTION
 Process the content of a MTL file, as specified by document
 C<level1_dfcb_rev5_401.pdf>.
 See also F<http://landsathandbook.gsfc.nasa.gov/handbook/handbook_toc.html>
 
 =chapter FUNCTIONS
+
+=function landsat_meta_from_filename FILENAME
+Returns information from the filename, like the PRODUCT_METADATA
+structured from the MTL record, but without opening the file.
+=cut
+
+sub landsat_meta_from_filename($)
+{   my $filename = basename shift;
+    $filename =~ m/^L([57])(\d\d\d)(\d\d\d)_(\d\d\d)(\d\d\d\d)(\d\d)(\d\d)/
+       or return;
+
+   +{ SPACECRAFT_ID    => "Landsat$1"
+    , WRS_PATH         => $2
+    , STARTING_ROW     => $3
+    , ENDING_ROW       => 4
+    , ACQUISITION_DATE => "$5-$6-$7"
+    };
+}
 
 =function landsat_mtl_from_file FILE
 Read one Vgroup record from the FILE, specified by name or filehandle.
@@ -137,11 +162,23 @@ sub _cleanup_metadata_file_info($)
             , dorran_unit => $6+0 };
     }
 
-    # 0 = unknown, becomes undef
-    $d->{landsat_band} = $d->{LANDSAT5_XBAND} || $d->{LANDSAT7_XBAND} || undef;
+    # 0 = unknown, becomes undef.
+    $d->{landsat_xband} = $d->{LANDSAT5_XBAND} || $d->{LANDSAT7_XBAND} || undef;
 
-    # DATEHOUR_CONTACT_PERIOD
     # no simple way to translate DOY -> month/day
+    if($d->{DATEHOUR_CONTACT_PERIOD} =~ m/^(\d\d)(\d\d\d)(\d\d)$/ )
+    {   my ($year, $yday, $hour) = ($1, $2, $3);
+        $year += $year < 70 ? 2000 : 1900;
+        my @monthdays = (undef, 31,28,31,30,31,30,31,31,30,31,30,31);
+        $monthdays[2] = 29 if $year%400==0 || ($year%4==0 && $year%100!=0);
+        my ($month, $day) = (1, $yday);
+        while($day > $monthdays[$month])
+        {   $day -= $monthdays[$month];
+            $month++;
+        }
+        $d->{received} = sprintf "%04d-%02d-%02dT%02d:00:00Z"
+          , $year, $month, $day, $hour;
+    }
 }
 
 sub _cleanup_product_metadata($$)
@@ -153,7 +190,7 @@ sub _cleanup_product_metadata($$)
     {   $d->{software_system}  = $1;
         $d->{software_version} = $2;
     }
-    $d->{EMPHEMERIS_TYPE} ||= 'PREDICTIVE';
+    $d->{EPHEMERIS_TYPE} ||= 'PREDICTIVE';
 
     foreach my $band ( '', '_PAN', '_THM')
     {   $d->{"PRODUCT_UL_CORNER_LAT$band"} or next;
@@ -196,7 +233,12 @@ sub _cleanup_product_parameters($)
 
 sub _cleanup_corrections_applied($)
 {   my $d = shift or return;
-    # too specific
+
+    foreach my $key (qw/BANDING COHERENT_NOICE MEMORY_EFFECT
+       SCAN_CORRELATED_SHIFT INOPERABLE_DETECTORS DROPPED_LINES/)
+    {   defined $d->{$key} or next;
+        $d->{lc $key} = $d->{$key} eq 'Y' ? 1 : 0;
+    }
 }
 
 sub _cleanup_projection_parameters($)

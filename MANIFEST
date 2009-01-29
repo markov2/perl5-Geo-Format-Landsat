@@ -2,6 +2,7 @@ ChangeLog
 MANIFEST
 Makefile.PL
 examples/lansat.pl
+examples/output.txt
 lib/Geo/Format/Landsat/MTL.pm
 t/01use.t
 t/99pod.t

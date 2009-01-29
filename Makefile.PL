@@ -4,7 +4,7 @@ require 5.008;
 
 WriteMakefile
   ( NAME        => 'Geo::Format::Landsat'
-  , VERSION     => '0.02'
+  , VERSION     => '0.03'
   , PREREQ_PM   =>
      { Test::More     => 0.47
      , Geo::Point     => 0.90
