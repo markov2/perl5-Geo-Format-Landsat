@@ -3,6 +3,7 @@ MANIFEST
 Makefile.PL
 examples/lansat.pl
 examples/output.txt
+lib/Geo/Format/Landsat.pm
 lib/Geo/Format/Landsat/MTL.pm
 t/01use.t
-t/99pod.t
+xt/99pod.t
