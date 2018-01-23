@@ -6,8 +6,8 @@
   * Indexed from CPAN: <http://search.cpan.org/~markov/Geo-Format-Landsat/>
     and <https://metacpan.org/release/Geo-Format-Landsat>
 
-Simply transform the meta-data which leads Landsat and ERS imagery
-into Perl HASHes for easy access.  See examples/ directory!!
+Process the content of Landsat MTL files. There are more satellite
+imagery formats from Landsat, but not yet support.
 
 This module has not been used for quite some time, but should still work.
 It is still being maintained: please report issues.
